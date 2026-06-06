@@ -93,7 +93,7 @@ export default function FindParkingPage() {
     setSelectedSlot(null)
     fetch(`/api/slots?lot_id=${selectedLot.id}`)
       .then((r) => r.json())
-      .then((data) => setSlots(Array.isArray(data) ? data : []))
+      .then((data) => setSlots(Array.isArray(data.slots) ? data.slots : []))
       .catch(() => setSlots([]))
       .finally(() => setSlotsLoading(false))
   }, [selectedLot])
@@ -155,12 +155,8 @@ export default function FindParkingPage() {
   }, [selectedLot, bookingForm.hours, activeRule])
 
   const slotsByFloor = useMemo(() => {
-    const map = new Map<number, Slot[]>()
-    slots.forEach((s) => {
-      if (!map.has(s.floor)) map.set(s.floor, [])
-      map.get(s.floor)!.push(s)
-    })
-    return Array.from(map.entries()).sort(([a], [b]) => a - b)
+    if (slots.length === 0) return []
+    return [["all", slots] as unknown as [number, Slot[]]]
   }, [slots])
 
   const handleLotClick = useCallback(
@@ -361,7 +357,7 @@ export default function FindParkingPage() {
                           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Selected Slot: <span className="text-indigo-600 dark:text-indigo-400 font-bold">{selectedSlot.slot_number}</span>
                             <span className="text-gray-400 ml-2">
-                              (Floor {selectedSlot.floor}) {slotTypeIcon[selectedSlot.type]}
+                              {slotTypeIcon[selectedSlot.type]}
                             </span>
                           </p>
                           <Button
@@ -458,11 +454,8 @@ export default function FindParkingPage() {
                           <Layers size={16} />
                           Select a Slot
                         </p>
-                        {slotsByFloor.map(([floor, floorSlots]) => (
-                          <div key={floor}>
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                              Floor {floor}
-                            </p>
+                        {slotsByFloor.map(([_, floorSlots]) => (
+                          <div key="all">
                             <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                               {floorSlots.map((slot) => {
                                 const isAvailable = slot.status === "available"

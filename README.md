@@ -101,7 +101,7 @@ A full-featured, production-ready smart parking management web app built with **
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/parkvault.git
+git clone https://github.com/Haris-Ahmed83/parkvault.git
 cd parkvault
 
 # Install dependencies
@@ -163,4 +163,4 @@ Pull requests are welcome! For major changes, please open an issue first.
 
 ## 📬 Contact
 
-Built with ❤️ by [Your Name](https://github.com/YOUR_USERNAME)
+Built with ❤️ by [Muhammad Haris](https://github.com/Haris-Ahmed83)

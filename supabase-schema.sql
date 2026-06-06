@@ -112,14 +112,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Seed admin user (set your own password)
+-- Seed admin user (password: admin123)
 INSERT INTO users (name, email, password, role, wallet_balance)
-VALUES ('Admin', 'admin@parkvault.com', 'change-this-password', 'admin', 0)
+VALUES ('Admin', 'admin@parkvault.com', 'admin123', 'admin', 0)
 ON CONFLICT (email) DO NOTHING;
 
--- Seed gatekeeper user (set your own password)
+-- Seed gatekeeper user (password: gate123)
 INSERT INTO users (name, email, password, role, wallet_balance)
-VALUES ('Gatekeeper', 'gate@parkvault.com', 'change-this-password', 'gatekeeper', 0)
+VALUES ('Gatekeeper', 'gate@parkvault.com', 'gate123', 'gatekeeper', 0)
 ON CONFLICT (email) DO NOTHING;
 
 -- Seed user (password: user123)

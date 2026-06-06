@@ -7,7 +7,7 @@ import Button from "@/components/ui/button"
 import Input from "@/components/ui/input"
 import StatusBadge from "@/components/shared/StatusBadge"
 import ParkingMap from "@/components/maps/ParkingMap"
-import { Plus, MapPin, Edit2, Trash2, Building2, Crosshair } from "lucide-react"
+import { Plus, MapPin, Edit2, Trash2, Building2, Crosshair, Layers } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import type { ParkingLot } from "@/types"
 
@@ -26,6 +26,7 @@ export default function AdminLotsPage() {
     hourly_rate: 50,
     walkin_percentage: 50,
   })
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   useEffect(() => {
     loadLots()
@@ -44,33 +45,50 @@ export default function AdminLotsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
-    const { error } = await supabase.from("parking_lots").insert({
-      name: form.name,
-      address: form.address,
-      lat: form.lat,
-      lng: form.lng,
-      total_slots: form.total_slots,
-      available_slots: form.total_slots,
-      hourly_rate: form.hourly_rate,
-      walkin_percentage: form.walkin_percentage,
-      has_2wheeler: true,
-      has_4wheeler: true,
-      is_active: true,
-    })
-    if (error) {
-      setError(error.message)
-      return
+
+    if (editingId) {
+      const { error } = await supabase.from("parking_lots").update({
+        name: form.name,
+        address: form.address,
+        lat: form.lat,
+        lng: form.lng,
+        total_slots: form.total_slots,
+        hourly_rate: form.hourly_rate,
+        walkin_percentage: form.walkin_percentage,
+      }).eq("id", editingId)
+      if (error) { setError(error.message); return }
+      setEditingId(null)
+    } else {
+      const { data: lot, error } = await supabase.from("parking_lots").insert({
+        name: form.name,
+        address: form.address,
+        lat: form.lat,
+        lng: form.lng,
+        total_slots: form.total_slots,
+        available_slots: form.total_slots,
+        hourly_rate: form.hourly_rate,
+        walkin_percentage: form.walkin_percentage,
+        has_2wheeler: true,
+        has_4wheeler: true,
+        is_active: true,
+      }).select().single()
+
+      if (error) { setError(error.message); return }
+
+      const slotRecords = []
+      for (let i = 1; i <= form.total_slots; i++) {
+        slotRecords.push({
+          lot_id: lot.id,
+          slot_number: `S${i}`,
+          type: i % 3 === 0 ? "2wheeler" : "4wheeler",
+          status: "available",
+        })
+      }
+      await supabase.from("slots").insert(slotRecords)
     }
+
     setShowForm(false)
-    setForm({
-      name: "",
-      address: "",
-      lat: 31.5204,
-      lng: 74.3587,
-      total_slots: 20,
-      hourly_rate: 50,
-      walkin_percentage: 50,
-    })
+    setForm({ name: "", address: "", lat: 31.5204, lng: 74.3587, total_slots: 20, hourly_rate: 50, walkin_percentage: 50 })
     loadLots()
   }
 
@@ -78,6 +96,25 @@ export default function AdminLotsPage() {
     if (!confirm("Delete this parking lot?")) return
     await supabase.from("parking_lots").delete().eq("id", id)
     if (selectedLotId === id) setSelectedLotId(null)
+    loadLots()
+  }
+
+  async function generateSlots(lotId: string, total: number) {
+    const { count } = await supabase.from("slots").select("*", { count: "exact", head: true }).eq("lot_id", lotId)
+    if (count && count > 0) {
+      if (!confirm("Slots already exist. Regenerate?")) return
+      await supabase.from("slots").delete().eq("lot_id", lotId)
+    }
+    const records = []
+    for (let i = 1; i <= total; i++) {
+      records.push({
+        lot_id: lotId,
+        slot_number: `S${i}`,
+        type: i % 3 === 0 ? "2wheeler" : "4wheeler",
+        status: "available",
+      })
+    }
+    await supabase.from("slots").insert(records)
     loadLots()
   }
 
@@ -244,8 +281,15 @@ export default function AdminLotsPage() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => {
+                  setEditingId(lot.id)
+                  setForm({ name: lot.name, address: lot.address, lat: Number(lot.lat), lng: Number(lot.lng), total_slots: Number(lot.total_slots), hourly_rate: Number(lot.hourly_rate), walkin_percentage: Number(lot.walkin_percentage) })
+                  setShowForm(true)
+                }}>
                   <Edit2 size={14} /> Edit
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => generateSlots(lot.id, Number(lot.total_slots))}>
+                  <Layers size={14} /> Slots
                 </Button>
                 <Button variant="danger" size="sm" className="flex-1" onClick={() => handleDelete(lot.id)}>
                   <Trash2 size={14} /> Delete
